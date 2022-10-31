@@ -1,6 +1,6 @@
 mod ecs;
 
-use ecs::{World, Component};
+use ecs::{Component, World};
 
 use macroquad::prelude::*;
 
@@ -15,22 +15,40 @@ fn window_conf() -> Conf {
 struct TextComponent(&'static str);
 impl Component for TextComponent {}
 
+struct PositionComponent {
+    x: f32,
+    y: f32,
+}
+impl PositionComponent {
+    fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+}
+impl Component for PositionComponent {}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     let mut world = World::new();
     world.register::<TextComponent>();
+    world.register::<PositionComponent>();
 
-    world.entity(|entity| entity.component(TextComponent("Hello")));
-
-    for component in world.component::<TextComponent>() {
-        if let Some(TextComponent(text)) = component {
-            println!("{}", text);
-        }
-    }
+    world.entity(|entity| {
+        entity
+            .component(TextComponent("Hello"))
+            .component(PositionComponent::new(10.0, 20.0))
+    });
+    world.entity(|entity| {
+        entity
+            .component(TextComponent("This is component-based text."))
+            .component(PositionComponent::new(30.0, 70.0))
+    });
 
     loop {
         clear_background(BLACK);
-        draw_text("Hello, world!", 10.0, 20.0, 20.0, WHITE);
+
+        world.execute(|(text, pos): &(&TextComponent, &PositionComponent)| {
+            draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
+        });
 
         next_frame().await
     }

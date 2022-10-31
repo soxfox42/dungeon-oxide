@@ -9,7 +9,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct World {
     components: HashMap<TypeId, Box<dyn ComponentVec>>,
-    locked: bool,
+    entities: usize,
 }
 
 impl World {
@@ -20,7 +20,7 @@ impl World {
 
     /// Creates storage in the `World` for a specific [`Component`] type.
     pub fn register<T: Component>(&mut self) {
-        if self.locked {
+        if self.entities != 0 {
             panic!("Attempted to register a new component on an active World");
         }
         self.components
@@ -40,7 +40,7 @@ impl World {
 
     /// Inserts a new entity given a map of types to components.
     fn insert(&mut self, mut components: HashMap<TypeId, Box<dyn Any>>) {
-        self.locked = true;
+        self.entities += 1;
         for (typeid, vec) in self.components.iter_mut() {
             vec.insert(components.remove(typeid));
         }
@@ -65,6 +65,14 @@ impl World {
             .downcast_mut()
             .unwrap()
     }
+
+    pub fn execute<'a, T: Fetch<'a>>(&'a mut self, mut system: impl FnMut(&T)) {
+        for i in 0..self.entities {
+            if let Some(data) = T::fetch(self, i) {
+                system(&data);
+            }
+        }
+    }
 }
 
 /// A representation of a single object in the game.
@@ -85,11 +93,11 @@ impl EntityBuilder {
 /// A marker trait indicating that a type may be used as component data.
 pub trait Component: 'static {}
 
+/// A trait for dynamically typed component vectors.
 trait ComponentVec {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn insert(&mut self, component: Option<Box<dyn Any>>);
-
 }
 
 impl<T: Component> ComponentVec for Vec<Option<T>> {
@@ -105,3 +113,45 @@ impl<T: Component> ComponentVec for Vec<Option<T>> {
         self.push(component.map(|x| *x.downcast().unwrap()));
     }
 }
+
+pub trait Fetch<'a>: Sized {
+    fn fetch(world: &'a World, idx: usize) -> Option<Self>;
+}
+
+impl<'a, T: Component> Fetch<'a> for &'a T {
+    fn fetch(world: &'a World, idx: usize) -> Option<Self> {
+        world.component::<T>()[idx].as_ref()
+    }
+}
+
+macro_rules! fetch_tuple {
+    ($($name:ident),+) => {
+        impl<'a, $($name),+> Fetch<'a> for ($($name,)+)
+        where
+        $(
+            $name: Fetch<'a>,
+        )+
+        {
+            #[allow(non_snake_case)]
+            fn fetch(world: &'a World, idx: usize) -> Option<Self> {
+                $(
+                    let $name = $name::fetch(world, idx)?;
+                )+
+                Some(($($name,)+))
+            }
+        }
+    };
+}
+
+macro_rules! fetch_tuples {
+    ($name:ident) => {
+        fetch_tuple!($name);
+    };
+    ($name:ident, $($names:ident),+) => {
+        fetch_tuple!($name, $($names),+);
+        fetch_tuples!($($names),+);
+    };
+}
+
+// Implement up to 8-tuple fetches
+fetch_tuples!(A, B, C, D, E, F, G, H);
