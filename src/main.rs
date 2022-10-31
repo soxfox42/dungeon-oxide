@@ -46,7 +46,7 @@ async fn main() {
     loop {
         clear_background(BLACK);
 
-        world.execute(|(text, pos): &(&TextComponent, &PositionComponent)| {
+        world.execute(|(text, pos): (&TextComponent, &PositionComponent)| {
             draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
         });
 

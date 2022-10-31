@@ -31,19 +31,19 @@ impl World {
     pub fn entity(
         &mut self,
         f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder,
-    ) -> &mut Self {
+    ) -> Entity {
         let mut builder = EntityBuilder::default();
         f(&mut builder);
-        self.insert(builder.0);
-        self
+        self.insert(builder.0)
     }
 
     /// Inserts a new entity given a map of types to components.
-    fn insert(&mut self, mut components: HashMap<TypeId, Box<dyn Any>>) {
+    fn insert(&mut self, mut components: HashMap<TypeId, Box<dyn Any>>) -> Entity {
         self.entities += 1;
         for (typeid, vec) in self.components.iter_mut() {
             vec.insert(components.remove(typeid));
         }
+        Entity(self.entities - 1)
     }
 
     /// Borrows the vector corresponding to a [`Component`] type.
@@ -66,10 +66,10 @@ impl World {
             .unwrap()
     }
 
-    pub fn execute<'a, T: Fetch<'a>>(&'a mut self, mut system: impl FnMut(&T)) {
+    pub fn execute<'a, T: Fetch<'a>>(&'a mut self, mut system: impl FnMut(T)) {
         for i in 0..self.entities {
             if let Some(data) = T::fetch(self, i) {
-                system(&data);
+                system(data);
             }
         }
     }
