@@ -48,7 +48,7 @@ async fn main() {
 
         world.execute(|pos: ReadWrite<PositionComponent>| {
             for pos in pos.flatten() {
-                pos.x += 1.0
+                pos.x += 1.0;
             }
         });
         world.execute(|pos: Read<PositionComponent>| {
@@ -57,6 +57,6 @@ async fn main() {
             }
         });
 
-        next_frame().await
+        next_frame().await;
     }
 }

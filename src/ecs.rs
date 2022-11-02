@@ -22,9 +22,7 @@ impl World {
 
     /// Creates storage in the `World` for a specific [`Component`] type.
     pub fn register<T: Component>(&mut self) {
-        if self.entities != 0 {
-            panic!("Attempted to register a new component on an active World");
-        }
+        assert_eq!(self.entities, 0, "Attempted to register a new component on an active World");
         self.components.insert(
             TypeId::of::<T>(),
             Box::new(RefCell::new(SparseVec::<T>::new())),
@@ -41,7 +39,7 @@ impl World {
     /// Inserts a new entity given a map of types to components.
     fn insert(&mut self, mut components: HashMap<TypeId, Box<dyn Any>>) -> Entity {
         self.entities += 1;
-        for (typeid, vec) in self.components.iter_mut() {
+        for (typeid, vec) in &mut self.components {
             vec.insert(components.remove(typeid));
         }
         Entity(self.entities - 1)
@@ -150,7 +148,7 @@ impl<'a, T: Component> Iterator for Read<'a, T> {
 
         // SAFETY: See ReadWrite.
         let vec = unsafe { &mut *self.ptr };
-        vec.get(index).map(|o| o.as_ref())
+        vec.get(index).map(Option::as_ref)
     }
 }
 impl<'a, T: Component> Iterator for ReadWrite<'a, T> {
@@ -168,7 +166,7 @@ impl<'a, T: Component> Iterator for ReadWrite<'a, T> {
         // - Finally, thanks to the RefCell used to hold the component storages, Read and ReadWrite
         //   follow standard Rust aliasing rules.
         let vec = unsafe { &mut *self.ptr };
-        vec.get_mut(index).map(|o| o.as_mut())
+        vec.get_mut(index).map(Option::as_mut)
     }
 }
 
