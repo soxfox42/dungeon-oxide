@@ -134,7 +134,7 @@ impl<'a, T: Component> Data<'a, T> {
             _borrow: borrow,
         }
     }
-    pub fn iter_mut<'b>(&'b mut self) -> IterMut<'a, T> {
+    pub fn iter_mut(&mut self) -> IterMut<'a, T> {
         let cell = self.world.cell();
         let borrow = cell.borrow_mut();
         IterMut {
@@ -185,34 +185,34 @@ impl<'a, T: Component> Iterator for IterMut<'a, T> {
     }
 }
 
-// macro_rules! fetch_tuple {
-//     ($($name:ident),+) => {
-//         impl<'a, $($name),+> Fetch<'a> for ($($name,)+)
-//         where
-//         $(
-//             $name: Fetch<'a>,
-//         )+
-//         {
-//             #[allow(non_snake_case)]
-//             fn fetch(world: &'a World, idx: usize) -> Option<Self> {
-//                 $(
-//                     let $name = $name::fetch(world, idx)?;
-//                 )+
-//                 Some(($($name,)+))
-//             }
-//         }
-//     };
-// }
-//
-// macro_rules! fetch_tuples {
-//     ($name:ident) => {
-//         fetch_tuple!($name);
-//     };
-//     ($name:ident, $($names:ident),+) => {
-//         fetch_tuple!($name, $($names),+);
-//         fetch_tuples!($($names),+);
-//     };
-// }
-//
-// // Implement up to 8-tuple fetches
-// fetch_tuples!(A, B, C, D, E, F, G, H);
+macro_rules! fetch_tuple {
+    ($($name:ident),+) => {
+        impl<'a, $($name),+> Fetch<'a> for ($($name,)+)
+        where
+        $(
+            $name: Fetch<'a>,
+        )+
+        {
+            #[allow(non_snake_case)]
+            fn fetch(world: &'a World) -> Self {
+                $(
+                    let $name = $name::fetch(world);
+                )+
+                ($($name,)+)
+            }
+        }
+    };
+}
+
+macro_rules! fetch_tuples {
+    ($name:ident) => {
+        fetch_tuple!($name);
+    };
+    ($name:ident, $($names:ident),+) => {
+        fetch_tuple!($name, $($names),+);
+        fetch_tuples!($($names),+);
+    };
+}
+
+// Implement up to 8-tuple fetches
+fetch_tuples!(A, B, C, D, E, F, G, H);
