@@ -1,9 +1,9 @@
-
 //! A super-simple ECS framework.
 
 use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
 type SparseVec<T> = Vec<Option<T>>;
 
@@ -22,7 +22,10 @@ impl World {
 
     /// Creates storage in the `World` for a specific [`Component`] type.
     pub fn register<T: Component>(&mut self) {
-        assert_eq!(self.entities, 0, "Attempted to register a new component on an active World");
+        assert_eq!(
+            self.entities, 0,
+            "Attempted to register a new component on an active World"
+        );
         self.components.insert(
             TypeId::of::<T>(),
             Box::new(RefCell::new(SparseVec::<T>::new())),
@@ -105,33 +108,36 @@ pub trait Fetch<'a>: Sized {
     fn fetch(world: &'a World) -> Self;
 }
 
-pub struct Read<'a, T> {
-    ptr: *mut SparseVec<T>,
+pub struct Data<'a, T> {
+    world: &'a World,
+    _phantom: PhantomData<T>,
+}
+
+pub struct Iter<'a, T> {
+    ptr: *const SparseVec<T>,
     index: usize,
     _borrow: Ref<'a, SparseVec<T>>,
 }
-pub struct ReadWrite<'a, T> {
+pub struct IterMut<'a, T> {
     ptr: *mut SparseVec<T>,
     index: usize,
     _borrow: RefMut<'a, SparseVec<T>>,
 }
 
-impl<'a, T: Component> Fetch<'a> for Read<'a, T> {
-    fn fetch(world: &'a World) -> Self {
-        let cell = world.cell();
+impl<'a, T: Component> Data<'a, T> {
+    pub fn iter(&self) -> Iter<'a, T> {
+        let cell = self.world.cell();
         let borrow = cell.borrow();
-        Self {
-            ptr: cell.as_ptr(),
+        Iter {
+            ptr: cell.as_ptr() as *const Vec<Option<T>>,
             index: 0,
             _borrow: borrow,
         }
     }
-}
-impl<'a, T: Component> Fetch<'a> for ReadWrite<'a, T> {
-    fn fetch(world: &'a World) -> Self {
-        let cell = world.cell();
+    pub fn iter_mut<'b>(&'b mut self) -> IterMut<'a, T> {
+        let cell = self.world.cell();
         let borrow = cell.borrow_mut();
-        Self {
+        IterMut {
             ptr: cell.as_ptr(),
             index: 0,
             _borrow: borrow,
@@ -139,19 +145,28 @@ impl<'a, T: Component> Fetch<'a> for ReadWrite<'a, T> {
     }
 }
 
-impl<'a, T: Component> Iterator for Read<'a, T> {
+impl<'a, T: Component> Fetch<'a> for Data<'a, T> {
+    fn fetch(world: &'a World) -> Self {
+        Self {
+            world,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<'a, T: Component> Iterator for Iter<'a, T> {
     type Item = Option<&'a T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
         self.index += 1;
 
-        // SAFETY: See ReadWrite.
-        let vec = unsafe { &mut *self.ptr };
+        // SAFETY: See IterMut.
+        let vec = unsafe { &*self.ptr };
         vec.get(index).map(Option::as_ref)
     }
 }
-impl<'a, T: Component> Iterator for ReadWrite<'a, T> {
+impl<'a, T: Component> Iterator for IterMut<'a, T> {
     type Item = Option<&'a mut T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -159,8 +174,8 @@ impl<'a, T: Component> Iterator for ReadWrite<'a, T> {
         self.index += 1;
 
         // SAFETY:
-        // - The Vec behind self.ptr is guaranteed to last at least as long as self.borrow,
-        //   as long as self.borrow is never modified.
+        // - The Vec behind inner.ptr is guaranteed to last at least as long as inner.borrow,
+        //   as long as inner is never modified.
         // - Due to the strictly increasing self.index, this will never return multiple mutable
         //   references to the same cell.
         // - Finally, thanks to the RefCell used to hold the component storages, Read and ReadWrite
