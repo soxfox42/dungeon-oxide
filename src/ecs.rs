@@ -1,9 +1,11 @@
-#![allow(dead_code)]
 
 //! A super-simple ECS framework.
 
 use std::any::{Any, TypeId};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
+
+type SparseVec<T> = Vec<Option<T>>;
 
 /// A container to store all components and systems in use at any point.
 #[derive(Default)]
@@ -23,15 +25,14 @@ impl World {
         if self.entities != 0 {
             panic!("Attempted to register a new component on an active World");
         }
-        self.components
-            .insert(TypeId::of::<T>(), Box::new(Vec::<Option<T>>::new()));
+        self.components.insert(
+            TypeId::of::<T>(),
+            Box::new(RefCell::new(SparseVec::<T>::new())),
+        );
     }
 
     /// Inserts a new entity using a closure that populates the entity's components.
-    pub fn entity(
-        &mut self,
-        f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder,
-    ) -> Entity {
+    pub fn entity(&mut self, f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder) -> Entity {
         let mut builder = EntityBuilder::default();
         f(&mut builder);
         self.insert(builder.0)
@@ -46,32 +47,18 @@ impl World {
         Entity(self.entities - 1)
     }
 
-    /// Borrows the vector corresponding to a [`Component`] type.
-    pub fn component<T: Component>(&self) -> &Vec<Option<T>> {
+    /// Retrieves the [`std::cell::RefCell`] containing a [`Component`]'s storage.
+    fn cell<T: Component>(&self) -> &RefCell<SparseVec<T>> {
         self.components
             .get(&TypeId::of::<T>())
             .expect("Attempted to borrow non-existent component vector")
             .as_any()
-            .downcast_ref()
-            .unwrap()
-    }
-
-    /// Mutably borrows the vector corresponding to a [`Component`] type.
-    pub fn component_mut<T: Component>(&mut self) -> &mut Vec<Option<T>> {
-        self.components
-            .get_mut(&TypeId::of::<T>())
-            .expect("Attempted to borrow non-existent component vector")
-            .as_any_mut()
-            .downcast_mut()
+            .downcast_ref::<RefCell<SparseVec<T>>>()
             .unwrap()
     }
 
     pub fn execute<'a, T: Fetch<'a>>(&'a mut self, mut system: impl FnMut(T)) {
-        for i in 0..self.entities {
-            if let Some(data) = T::fetch(self, i) {
-                system(data);
-            }
-        }
+        system(T::fetch(self));
     }
 }
 
@@ -100,7 +87,7 @@ trait ComponentVec {
     fn insert(&mut self, component: Option<Box<dyn Any>>);
 }
 
-impl<T: Component> ComponentVec for Vec<Option<T>> {
+impl<T: Component> ComponentVec for RefCell<SparseVec<T>> {
     fn as_any(&self) -> &dyn Any {
         self as &dyn Any
     }
@@ -110,48 +97,109 @@ impl<T: Component> ComponentVec for Vec<Option<T>> {
     }
 
     fn insert(&mut self, component: Option<Box<dyn Any>>) {
-        self.push(component.map(|x| *x.downcast().unwrap()));
+        self.get_mut()
+            .push(component.map(|x| *x.downcast().unwrap()));
     }
 }
 
+/// A type that may be fetched from a `World`.
 pub trait Fetch<'a>: Sized {
-    fn fetch(world: &'a World, idx: usize) -> Option<Self>;
+    fn fetch(world: &'a World) -> Self;
 }
 
-impl<'a, T: Component> Fetch<'a> for &'a T {
-    fn fetch(world: &'a World, idx: usize) -> Option<Self> {
-        world.component::<T>()[idx].as_ref()
+pub struct Read<'a, T> {
+    ptr: *mut SparseVec<T>,
+    index: usize,
+    _borrow: Ref<'a, SparseVec<T>>,
+}
+pub struct ReadWrite<'a, T> {
+    ptr: *mut SparseVec<T>,
+    index: usize,
+    _borrow: RefMut<'a, SparseVec<T>>,
+}
+
+impl<'a, T: Component> Fetch<'a> for Read<'a, T> {
+    fn fetch(world: &'a World) -> Self {
+        let cell = world.cell();
+        let borrow = cell.borrow();
+        Self {
+            ptr: cell.as_ptr(),
+            index: 0,
+            _borrow: borrow,
+        }
+    }
+}
+impl<'a, T: Component> Fetch<'a> for ReadWrite<'a, T> {
+    fn fetch(world: &'a World) -> Self {
+        let cell = world.cell();
+        let borrow = cell.borrow_mut();
+        Self {
+            ptr: cell.as_ptr(),
+            index: 0,
+            _borrow: borrow,
+        }
     }
 }
 
-macro_rules! fetch_tuple {
-    ($($name:ident),+) => {
-        impl<'a, $($name),+> Fetch<'a> for ($($name,)+)
-        where
-        $(
-            $name: Fetch<'a>,
-        )+
-        {
-            #[allow(non_snake_case)]
-            fn fetch(world: &'a World, idx: usize) -> Option<Self> {
-                $(
-                    let $name = $name::fetch(world, idx)?;
-                )+
-                Some(($($name,)+))
-            }
-        }
-    };
+impl<'a, T: Component> Iterator for Read<'a, T> {
+    type Item = Option<&'a T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.index;
+        self.index += 1;
+
+        // SAFETY: See ReadWrite.
+        let vec = unsafe { &mut *self.ptr };
+        vec.get(index).map(|o| o.as_ref())
+    }
+}
+impl<'a, T: Component> Iterator for ReadWrite<'a, T> {
+    type Item = Option<&'a mut T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let index = self.index;
+        self.index += 1;
+
+        // SAFETY:
+        // - The Vec behind self.ptr is guaranteed to last at least as long as self.borrow,
+        //   as long as self.borrow is never modified.
+        // - Due to the strictly increasing self.index, this will never return multiple mutable
+        //   references to the same cell.
+        // - Finally, thanks to the RefCell used to hold the component storages, Read and ReadWrite
+        //   follow standard Rust aliasing rules.
+        let vec = unsafe { &mut *self.ptr };
+        vec.get_mut(index).map(|o| o.as_mut())
+    }
 }
 
-macro_rules! fetch_tuples {
-    ($name:ident) => {
-        fetch_tuple!($name);
-    };
-    ($name:ident, $($names:ident),+) => {
-        fetch_tuple!($name, $($names),+);
-        fetch_tuples!($($names),+);
-    };
-}
-
-// Implement up to 8-tuple fetches
-fetch_tuples!(A, B, C, D, E, F, G, H);
+// macro_rules! fetch_tuple {
+//     ($($name:ident),+) => {
+//         impl<'a, $($name),+> Fetch<'a> for ($($name,)+)
+//         where
+//         $(
+//             $name: Fetch<'a>,
+//         )+
+//         {
+//             #[allow(non_snake_case)]
+//             fn fetch(world: &'a World, idx: usize) -> Option<Self> {
+//                 $(
+//                     let $name = $name::fetch(world, idx)?;
+//                 )+
+//                 Some(($($name,)+))
+//             }
+//         }
+//     };
+// }
+//
+// macro_rules! fetch_tuples {
+//     ($name:ident) => {
+//         fetch_tuple!($name);
+//     };
+//     ($name:ident, $($names:ident),+) => {
+//         fetch_tuple!($name, $($names),+);
+//         fetch_tuples!($($names),+);
+//     };
+// }
+//
+// // Implement up to 8-tuple fetches
+// fetch_tuples!(A, B, C, D, E, F, G, H);

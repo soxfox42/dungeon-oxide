@@ -1,6 +1,6 @@
 mod ecs;
 
-use ecs::{Component, World};
+use ecs::{Component, Read, ReadWrite, World};
 
 use macroquad::prelude::*;
 
@@ -46,8 +46,15 @@ async fn main() {
     loop {
         clear_background(BLACK);
 
-        world.execute(|(text, pos): (&TextComponent, &PositionComponent)| {
-            draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
+        world.execute(|pos: ReadWrite<PositionComponent>| {
+            for pos in pos.flatten() {
+                pos.x += 1.0
+            }
+        });
+        world.execute(|pos: Read<PositionComponent>| {
+            for pos in pos.flatten() {
+                draw_circle(pos.x, pos.y, 5.0, WHITE);
+            }
         });
 
         next_frame().await
