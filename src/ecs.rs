@@ -12,6 +12,7 @@ type SparseVec<T> = Vec<Option<T>>;
 pub struct World {
     components: HashMap<TypeId, Box<dyn ComponentVec>>,
     entities: usize,
+    systems: RefCell<Vec<Box<dyn Executable>>>,
 }
 
 impl World {
@@ -58,8 +59,15 @@ impl World {
             .unwrap()
     }
 
-    pub fn execute<'a, T: Fetch<'a>>(&'a mut self, mut system: impl FnMut(T)) {
-        system(T::fetch(self));
+    pub fn system<T: Executable>(&mut self, system: T) {
+        self.systems.get_mut().push(Box::new(system))
+    }
+
+    pub fn tick(&mut self) {
+        let mut systems = self.systems.borrow_mut();
+        for system in systems.iter_mut() {
+            system.execute(self)
+        }
     }
 }
 
@@ -216,3 +224,21 @@ macro_rules! fetch_tuples {
 
 // Implement up to 8-tuple fetches
 fetch_tuples!(A, B, C, D, E, F, G, H);
+
+pub trait System<'a>: 'static {
+    type Input: Fetch<'a>;
+    fn run(data: Self::Input);
+}
+
+pub trait Executable: 'static {
+    fn execute(&mut self, world: &World);
+}
+
+impl<T> Executable for T
+where
+    T: for<'a> System<'a>,
+{
+    fn execute(&mut self, world: &World) {
+        Self::run(T::Input::fetch(world))
+    }
+}
