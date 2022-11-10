@@ -1,6 +1,6 @@
 mod ecs;
 
-use ecs::{Component, Data, System, World};
+use ecs::{Component, World};
 
 use ::rand::Rng;
 use itertools::{izip, Itertools};
@@ -23,53 +23,37 @@ impl Component for PositionComponent {}
 struct DotComponent;
 impl Component for DotComponent {}
 
-struct WiggleSystem;
-impl<'a> System<'a> for WiggleSystem {
-    type Input = Data<'a, PositionComponent>;
-
-    fn run(mut pos: Self::Input) {
-        let mut rng = ::rand::thread_rng();
-        for pos in pos.iter_mut().flatten() {
-            pos.x += rng.gen_range(-2.0..2.0);
-            pos.y += rng.gen_range(-2.0..2.0);
-        }
+fn wiggle(world: &World) {
+    let mut rng = ::rand::thread_rng();
+    let mut pos_data = world.get_mut::<PositionComponent>();
+    for pos in pos_data.iter_mut().flatten() {
+        pos.x += rng.gen_range(-2.0..2.0);
+        pos.y += rng.gen_range(-2.0..2.0);
     }
 }
 
-struct LinesSystem;
-impl<'a> System<'a> for LinesSystem {
-    type Input = Data<'a, PositionComponent>;
-
-    fn run(pos: Self::Input) {
-        for (pos1, pos2) in pos.iter().flatten().tuple_windows() {
-            draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 1.0, BLUE);
-        }
+fn lines(world: &World) {
+    let pos_data = world.get::<PositionComponent>();
+    for (pos1, pos2) in pos_data.iter().flatten().tuple_windows() {
+        draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 1.0, BLUE);
     }
 }
 
-struct TextSystem;
-impl<'a> System<'a> for TextSystem {
-    type Input = (Data<'a, PositionComponent>, Data<'a, TextComponent>);
-
-    fn run((pos, text): Self::Input) {
-        for data in izip!(pos.iter(), text.iter()) {
-            if let (Some(pos), Some(text)) = data {
-                draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
-            }
-        }
+fn dots(world: &World) {
+    let pos_data = world.get::<PositionComponent>();
+    let dot_data = world.get::<DotComponent>();
+    for data in izip!(pos_data.iter(), dot_data.iter()) {
+        let (Some(pos), Some(_)) = data else { continue; };
+        draw_circle(pos.x, pos.y, 5.0, WHITE);
     }
 }
 
-struct DotSystem;
-impl<'a> System<'a> for DotSystem {
-    type Input = (Data<'a, PositionComponent>, Data<'a, DotComponent>);
-
-    fn run((pos, dot): Self::Input) {
-        for data in izip!(pos.iter(), dot.iter()) {
-            if let (Some(pos), Some(_dot)) = data {
-                draw_circle(pos.x, pos.y, 5.0, WHITE);
-            }
-        }
+fn text(world: &World) {
+    let pos_data = world.get::<PositionComponent>();
+    let text_data = world.get::<TextComponent>();
+    for data in izip!(pos_data.iter(), text_data.iter()) {
+        let (Some(pos), Some(text)) = data else { continue; };
+        draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
     }
 }
 
@@ -114,10 +98,13 @@ async fn main() {
             .component(PositionComponent::new(500.0, 50.0))
     });
 
-    world.system(WiggleSystem);
-    world.system(LinesSystem);
-    world.system(TextSystem);
-    world.system(DotSystem);
+    // update
+    world.system(wiggle);
+
+    // render
+    world.system(lines);
+    world.system(dots);
+    world.system(text);
 
     loop {
         clear_background(BLACK);
