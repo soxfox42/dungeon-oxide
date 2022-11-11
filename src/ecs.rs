@@ -4,15 +4,22 @@ use std::any::{Any, TypeId};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 
+/// A vector in which each element may or may not be present.
 type SparseVec<T> = Vec<Option<T>>;
-type System = dyn FnMut(&World);
+/// A map from component types to component vectors.
+type ComponentMap = HashMap<TypeId, Box<dyn ComponentVec>>;
+/// A system, represented as a boxed closure.
+type System = Box<dyn FnMut(&World)>;
 
 /// A container to store all components and systems in use at any point.
 #[derive(Default)]
 pub struct World {
-    components: HashMap<TypeId, Box<dyn ComponentVec>>,
+    /// The storages for all [`Component`]s in the world.
+    components: ComponentMap,
+    /// The current number of entities stored.
     entities: usize,
-    systems: RefCell<Vec<Box<System>>>,
+    /// The registered systems.
+    systems: RefCell<Vec<System>>,
 }
 
 impl World {
@@ -59,18 +66,22 @@ impl World {
             .unwrap()
     }
 
+    /// Returns an immutable reference to a specific component vector.
     pub fn get<T: Component>(&self) -> Ref<SparseVec<T>> {
         self.cell().borrow()
     }
 
+    /// Returns a mutable reference to a specific component vector.
     pub fn get_mut<T: Component>(&self) -> RefMut<SparseVec<T>> {
         self.cell().borrow_mut()
     }
 
+    /// Adds a system to the world.
     pub fn system<T: FnMut(&World) + 'static>(&mut self, system: T) {
         self.systems.get_mut().push(Box::new(system))
     }
 
+    /// Calls all systems in order.
     pub fn tick(&mut self) {
         let mut systems = self.systems.borrow_mut();
         for system in systems.iter_mut() {
@@ -88,6 +99,7 @@ pub struct Entity(usize);
 pub struct EntityBuilder(HashMap<TypeId, Box<dyn Any>>);
 
 impl EntityBuilder {
+    /// Adds a component to the entity.
     pub fn component<T: Component + 'static>(&mut self, component: T) -> &mut Self {
         self.0.insert(TypeId::of::<T>(), Box::new(component));
         self
@@ -97,10 +109,13 @@ impl EntityBuilder {
 /// A marker trait indicating that a type may be used as component data.
 pub trait Component: 'static {}
 
-/// A trait for dynamically typed component vectors.
+/// A trait for dynamically typed, dynamically borrow checked component vectors.
 trait ComponentVec {
+    /// Returns a reference to self as an [`Any`] object.
     fn as_any(&self) -> &dyn Any;
+    /// Returns a mutable reference to self as an [`Any`] object.
     fn as_any_mut(&mut self) -> &mut dyn Any;
+    /// Inserts a component into the vector.
     fn insert(&mut self, component: Option<Box<dyn Any>>);
 }
 
