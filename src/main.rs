@@ -43,8 +43,9 @@ fn points(world: &World) {
     let pos_data = world.get::<Position>();
     let point_data = world.get::<Point>();
     for data in izip!(pos_data.iter(), point_data.iter()) {
-        let (Some(pos), Some(_)) = data else { continue; };
-        draw_circle(pos.x, pos.y, 5.0, WHITE);
+        if let (Some(pos), Some(_)) = data {
+            draw_circle(pos.x, pos.y, 5.0, WHITE);
+        }
     }
 }
 
@@ -52,8 +53,9 @@ fn text(world: &World) {
     let pos_data = world.get::<Position>();
     let text_data = world.get::<Text>();
     for data in izip!(pos_data.iter(), text_data.iter()) {
-        let (Some(pos), Some(text)) = data else { continue; };
-        draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
+        if let (Some(pos), Some(text)) = data {
+            draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
+        }
     }
 }
 
