@@ -41,7 +41,10 @@ impl World {
     }
 
     /// Inserts a new entity using a closure that populates the entity's components.
-    pub fn add_entity(&mut self, f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder) -> usize {
+    pub fn add_entity(
+        &mut self,
+        f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder,
+    ) -> usize {
         let mut builder = EntityBuilder::default();
         f(&mut builder);
         self.insert(builder.0)
