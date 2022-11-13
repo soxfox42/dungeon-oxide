@@ -41,19 +41,19 @@ impl World {
     }
 
     /// Inserts a new entity using a closure that populates the entity's components.
-    pub fn add_entity(&mut self, f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder) -> Entity {
+    pub fn add_entity(&mut self, f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder) -> usize {
         let mut builder = EntityBuilder::default();
         f(&mut builder);
         self.insert(builder.0)
     }
 
     /// Inserts a new entity given a map of types to components.
-    fn insert(&mut self, mut components: HashMap<TypeId, Box<dyn Any>>) -> Entity {
+    fn insert(&mut self, mut components: HashMap<TypeId, Box<dyn Any>>) -> usize {
         self.entities += 1;
         for (typeid, vec) in &mut self.components {
             vec.insert(components.remove(typeid));
         }
-        Entity(self.entities - 1)
+        self.entities - 1
     }
 
     /// Retrieves the [`std::cell::RefCell`] containing a [`Component`]'s storage.
@@ -89,10 +89,6 @@ impl World {
         }
     }
 }
-
-/// A representation of a single object in the game.
-/// Modelled internally as a single index into the component storage vectors.
-pub struct Entity(usize);
 
 /// A helper struct for constructing new entities.
 #[derive(Default)]
