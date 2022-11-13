@@ -41,7 +41,7 @@ impl World {
     }
 
     /// Inserts a new entity using a closure that populates the entity's components.
-    pub fn entity(&mut self, f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder) -> Entity {
+    pub fn add_entity(&mut self, f: impl FnOnce(&mut EntityBuilder) -> &mut EntityBuilder) -> Entity {
         let mut builder = EntityBuilder::default();
         f(&mut builder);
         self.insert(builder.0)
@@ -100,7 +100,7 @@ pub struct EntityBuilder(HashMap<TypeId, Box<dyn Any>>);
 
 impl EntityBuilder {
     /// Adds a component to the entity.
-    pub fn component<T: Component + 'static>(&mut self, component: T) -> &mut Self {
+    pub fn with_component<T: Component + 'static>(&mut self, component: T) -> &mut Self {
         self.0.insert(TypeId::of::<T>(), Box::new(component));
         self
     }
