@@ -1,70 +1,24 @@
+mod components;
 mod ecs;
+mod systems;
+mod util;
 
-use ecs::{Component, World};
+use components::*;
+use ecs::World;
+use systems::*;
 
-use ::rand::Rng;
-use itertools::{izip, Itertools};
 use macroquad::prelude::*;
 
 /// Global data passed to all systems
-struct Context {}
-
-struct Text(&'static str);
-impl Component for Text {}
-
-struct Position {
-    x: f32,
-    y: f32,
-}
-impl Position {
-    fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
-}
-impl Component for Position {}
-
-struct Point;
-impl Component for Point {}
-
-fn wiggle(world: &World<Context>, _ctx: &Context) {
-    let mut rng = ::rand::thread_rng();
-    let mut pos_data = world.get_mut::<Position>();
-    for pos in pos_data.iter_mut().flatten() {
-        pos.x += rng.gen_range(-2.0..2.0);
-        pos.y += rng.gen_range(-2.0..2.0);
-    }
-}
-
-fn lines(world: &World<Context>, _ctx: &Context) {
-    let pos_data = world.get::<Position>();
-    for (pos1, pos2) in pos_data.iter().flatten().tuple_windows() {
-        draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 1.0, BLUE);
-    }
-}
-
-fn points(world: &World<Context>, _ctx: &Context) {
-    let pos_data = world.get::<Position>();
-    let point_data = world.get::<Point>();
-    for data in izip!(pos_data.iter(), point_data.iter()) {
-        if let (Some(pos), Some(_)) = data {
-            draw_circle(pos.x, pos.y, 5.0, WHITE);
-        }
-    }
-}
-
-fn text(world: &World<Context>, _ctx: &Context) {
-    let pos_data = world.get::<Position>();
-    let text_data = world.get::<Text>();
-    for data in izip!(pos_data.iter(), text_data.iter()) {
-        if let (Some(pos), Some(text)) = data {
-            draw_text(text.0, pos.x, pos.y, 20.0, WHITE);
-        }
-    }
+pub struct Context {
+    spritesheet: Texture2D,
 }
 
 fn window_conf() -> Conf {
     Conf {
         window_title: "Dungeon Oxide".into(),
+        window_width: 1024,
+        window_height: 768,
         high_dpi: true,
         ..Default::default()
     }
@@ -72,50 +26,51 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let context = Context {};
+    let context = Context {
+        spritesheet: Texture2D::from_file_with_format(
+            include_bytes!("../assets/sprites.png"),
+            Some(ImageFormat::Png),
+        ),
+    };
 
     let mut world = World::new();
-    world.register::<Text>();
-    world.register::<Position>();
-    world.register::<Point>();
+    world.register::<Pos>();
+    world.register::<Spr>();
+
+    world.system(draw_sprites);
 
     world.add_entity(|entity| {
         entity
-            .with_component(Point)
-            .with_component(Position::new(200.0, 100.0))
-    });
-    world.add_entity(|entity| {
-        entity
-            .with_component(Text("Hello, World!"))
-            .with_component(Position::new(100.0, 200.0))
-    });
-    world.add_entity(|entity| {
-        entity
-            .with_component(Text("This program uses an ECS framework."))
-            .with_component(Position::new(300.0, 400.0))
-    });
-    world.add_entity(|entity| {
-        entity
-            .with_component(Text("It involves multiple systems."))
-            .with_component(Position::new(150.0, 450.0))
-    });
-    world.add_entity(|entity| {
-        entity
-            .with_component(Point)
-            .with_component(Position::new(500.0, 50.0))
+            .with_component(Pos::new(16, 16))
+            .with_component(Spr(0))
     });
 
-    // update
-    world.system(wiggle);
-
-    // render
-    world.system(lines);
-    world.system(points);
-    world.system(text);
-
+    let render_target = render_target(256, 192);
+    render_target.texture.set_filter(FilterMode::Nearest);
+    let camera = Camera2D {
+        zoom: vec2(2.0 / 256.0, 2.0 / 192.0),
+        target: vec2(256.0 / 2.0, 192.0 / 2.0),
+        render_target: Some(render_target),
+        ..Default::default()
+    };
     loop {
+        set_camera(&camera);
         clear_background(BLACK);
+
         world.tick(&context);
+
+        set_default_camera();
+        draw_texture_ex(
+            render_target.texture,
+            0.0,
+            0.0,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(screen_width(), screen_height())),
+                ..Default::default()
+            },
+        );
+
         next_frame().await;
     }
 }

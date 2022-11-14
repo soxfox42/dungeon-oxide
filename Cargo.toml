@@ -7,4 +7,3 @@ license = "MIT"
 [dependencies]
 itertools = "0.10.5"
 macroquad = "0.3.24"
-rand = "0.8.5"
