@@ -9,23 +9,26 @@ type SparseVec<T> = Vec<Option<T>>;
 /// A map from component types to component vectors.
 type ComponentMap = HashMap<TypeId, Box<dyn ComponentVec>>;
 /// A system, represented as a boxed closure.
-type System = Box<dyn FnMut(&World)>;
+type System<T> = Box<dyn FnMut(&World<T>, &T)>;
 
 /// A container to store all components and systems in use at any point.
-#[derive(Default)]
-pub struct World {
+pub struct World<C> {
     /// The storages for all [`Component`]s in the world.
     components: ComponentMap,
     /// The current number of entities stored.
     entities: usize,
     /// The registered systems.
-    systems: RefCell<Vec<System>>,
+    systems: RefCell<Vec<System<C>>>,
 }
 
-impl World {
+impl<C> World<C> {
     /// Constructs a new, empty `World`.
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            components: ComponentMap::new(),
+            entities: 0,
+            systems: RefCell::new(Vec::new()),
+        }
     }
 
     /// Creates storage in the `World` for a specific [`Component`] type.
@@ -80,15 +83,15 @@ impl World {
     }
 
     /// Adds a system to the world.
-    pub fn system<T: FnMut(&World) + 'static>(&mut self, system: T) {
+    pub fn system<T: FnMut(&World<C>, &C) + 'static>(&mut self, system: T) {
         self.systems.get_mut().push(Box::new(system))
     }
 
     /// Calls all systems in order.
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self, ctx: &C) {
         let mut systems = self.systems.borrow_mut();
         for system in systems.iter_mut() {
-            system(self)
+            system(self, ctx);
         }
     }
 }

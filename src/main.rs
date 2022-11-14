@@ -6,6 +6,9 @@ use ::rand::Rng;
 use itertools::{izip, Itertools};
 use macroquad::prelude::*;
 
+/// Global data passed to all systems
+struct Context {}
+
 struct Text(&'static str);
 impl Component for Text {}
 
@@ -23,7 +26,7 @@ impl Component for Position {}
 struct Point;
 impl Component for Point {}
 
-fn wiggle(world: &World) {
+fn wiggle(world: &World<Context>, _ctx: &Context) {
     let mut rng = ::rand::thread_rng();
     let mut pos_data = world.get_mut::<Position>();
     for pos in pos_data.iter_mut().flatten() {
@@ -32,14 +35,14 @@ fn wiggle(world: &World) {
     }
 }
 
-fn lines(world: &World) {
+fn lines(world: &World<Context>, _ctx: &Context) {
     let pos_data = world.get::<Position>();
     for (pos1, pos2) in pos_data.iter().flatten().tuple_windows() {
         draw_line(pos1.x, pos1.y, pos2.x, pos2.y, 1.0, BLUE);
     }
 }
 
-fn points(world: &World) {
+fn points(world: &World<Context>, _ctx: &Context) {
     let pos_data = world.get::<Position>();
     let point_data = world.get::<Point>();
     for data in izip!(pos_data.iter(), point_data.iter()) {
@@ -49,7 +52,7 @@ fn points(world: &World) {
     }
 }
 
-fn text(world: &World) {
+fn text(world: &World<Context>, _ctx: &Context) {
     let pos_data = world.get::<Position>();
     let text_data = world.get::<Text>();
     for data in izip!(pos_data.iter(), text_data.iter()) {
@@ -69,6 +72,8 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    let context = Context {};
+
     let mut world = World::new();
     world.register::<Text>();
     world.register::<Position>();
@@ -110,7 +115,7 @@ async fn main() {
 
     loop {
         clear_background(BLACK);
-        world.tick();
+        world.tick(&context);
         next_frame().await;
     }
 }
