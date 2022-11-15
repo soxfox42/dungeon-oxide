@@ -6,13 +6,18 @@ mod util;
 use components::*;
 use ecs::World;
 use systems::*;
+use util::draw_tiles;
 
 use macroquad::prelude::*;
 
 /// Global data passed to all systems
 pub struct Context {
     spritesheet: Texture2D,
+    tileset: Texture2D,
+    level: &'static [u8],
 }
+
+const LEVELS: &[&[u8]] = &[include_bytes!("../levels/level1.dat")];
 
 fn window_conf() -> Conf {
     Conf {
@@ -31,6 +36,11 @@ async fn main() {
             include_bytes!("../assets/sprites.png"),
             Some(ImageFormat::Png),
         ),
+        tileset: Texture2D::from_file_with_format(
+            include_bytes!("../assets/tiles.png"),
+            Some(ImageFormat::Png),
+        ),
+        level: LEVELS[0],
     };
 
     let mut world = World::new();
@@ -60,6 +70,8 @@ async fn main() {
     loop {
         set_camera(&camera);
         clear_background(BLACK);
+
+        draw_tiles(context.level, context.tileset);
 
         world.tick(&context);
 
