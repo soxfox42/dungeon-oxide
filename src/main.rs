@@ -36,13 +36,17 @@ async fn main() {
     let mut world = World::new();
     world.register::<Pos>();
     world.register::<Spr>();
+    world.register::<Player>();
 
     world.system(draw_sprites);
+
+    world.system(move_player);
 
     world.add_entity(|entity| {
         entity
             .with_component(Pos::new(16, 16))
             .with_component(Spr(0))
+            .with_component(Player)
     });
 
     let render_target = render_target(256, 192);

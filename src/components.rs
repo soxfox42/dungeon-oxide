@@ -13,3 +13,6 @@ impl Component for Pos {}
 
 pub struct Spr(pub usize);
 impl Component for Spr {}
+
+pub struct Player;
+impl Component for Player {}
