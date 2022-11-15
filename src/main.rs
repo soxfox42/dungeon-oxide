@@ -1,6 +1,7 @@
 mod components;
 mod ecs;
 mod systems;
+mod tiles;
 mod util;
 
 use components::*;
@@ -9,6 +10,9 @@ use systems::*;
 use util::draw_tiles;
 
 use macroquad::prelude::*;
+
+const TILE_SIZE: i32 = 16;
+const LEVEL_WIDTH: usize = 16;
 
 /// Global data passed to all systems
 pub struct Context {
@@ -44,17 +48,14 @@ async fn main() {
     };
 
     let mut world = World::new();
-    world.register::<Pos>();
-    world.register::<Spr>();
-    world.register::<Player>();
-
-    world.system(draw_sprites);
-
-    world.system(move_player);
+    register_components(&mut world);
+    register_systems(&mut world);
 
     world.add_entity(|entity| {
         entity
-            .with_component(Pos::new(16, 16))
+            .with_component(Pos::new(32, 32))
+            .with_component(Vel::new(0, 0))
+            .with_component(Collider::new(16, 16))
             .with_component(Spr(0))
             .with_component(Player)
     });
