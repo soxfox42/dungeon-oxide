@@ -16,7 +16,6 @@ const LEVEL_WIDTH: usize = 16;
 
 /// Global data passed to all systems
 pub struct Context {
-    spritesheet: Texture2D,
     tileset: Texture2D,
     level: &'static [u8],
 }
@@ -36,10 +35,6 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     let context = Context {
-        spritesheet: Texture2D::from_file_with_format(
-            include_bytes!("../assets/sprites.png"),
-            Some(ImageFormat::Png),
-        ),
         tileset: Texture2D::from_file_with_format(
             include_bytes!("../assets/tiles.png"),
             Some(ImageFormat::Png),
@@ -53,9 +48,9 @@ async fn main() {
 
     world.add_entity(|entity| {
         entity
-            .with_component(Pos::new(98, 66))
-            .with_component(Collider::new(11, 11))
-            .with_component(Spr(1))
+            .with_component(Pos::new(96, 64))
+            .with_component(Collider::new(15, 15))
+            .with_component(Spr(235))
             .with_component(HealthMod { health: -1, cooldown: 0 })
     });
 
@@ -63,8 +58,8 @@ async fn main() {
         entity
             .with_component(Pos::new(32, 32))
             .with_component(Vel::new(0, 0))
-            .with_component(Collider::new(16, 16))
-            .with_component(Spr(0))
+            .with_component(Collider::new(15, 15))
+            .with_component(Spr(234))
             .with_component(Player)
             .with_component(Health(10))
     });
