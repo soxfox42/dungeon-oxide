@@ -175,7 +175,10 @@ pub fn move_pushables(world: &World<Context>, ctx: &Context) {
         .position(Option::is_some)
         .expect("Player entity missing.");
     let player_pos = pos[player_idx].unwrap();
-    let player_coll = colliders[player_idx].unwrap();
+    let player_coll = match colliders[player_idx]{
+        Some(coll) => coll,
+        None => return,
+    };
     let player_vel = vel[player_idx].unwrap();
 
     let mut new_pos = vec![None; pos.len()];

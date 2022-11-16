@@ -56,7 +56,8 @@ async fn main() {
     register_components(&mut world);
     register_systems(&mut world);
 
-    let map_id = load_level(&mut world, LEVELS[0]);
+    let mut current_level = 0;
+    let map_id = load_level(&mut world, LEVELS[current_level]);
     context.map = MAPS[map_id];
 
     let render_target = render_target(256, 192);
@@ -68,6 +69,31 @@ async fn main() {
         ..Default::default()
     };
     loop {
+        if is_key_pressed(KeyCode::Comma) {
+            current_level = (current_level - 1).rem_euclid(LEVELS.len());
+            world = World::new();
+            register_components(&mut world);
+            register_systems(&mut world);
+            let map_id = load_level(&mut world, LEVELS[current_level]);
+            context.map = MAPS[map_id];
+        }
+        if is_key_pressed(KeyCode::Period) {
+            current_level = (current_level + 1).rem_euclid(LEVELS.len());
+            world = World::new();
+            register_components(&mut world);
+            register_systems(&mut world);
+            let map_id = load_level(&mut world, LEVELS[current_level]);
+            context.map = MAPS[map_id];
+        }
+        let player_idx = world.get::<Player>().iter().position(Option::is_some).unwrap();
+        if world.get::<Spr>()[player_idx].is_none() {
+            world = World::new();
+            register_components(&mut world);
+            register_systems(&mut world);
+            let map_id = load_level(&mut world, LEVELS[current_level]);
+            context.map = MAPS[map_id];
+        }
+
         set_camera(&camera);
         clear_background(BLACK);
 
