@@ -16,6 +16,18 @@ pub fn draw_sprites(world: &World<Context>, ctx: &Context) {
     }
 }
 
+pub fn draw_attack(world: &World<Context>, _ctx: &Context) {
+    let pos = world.get::<Pos>();
+    let player = world.get::<Player>();
+    for data in izip!(pos.iter(), player.iter()) {
+        if let (Some(pos), Some(player)) = data {
+            if player.attack {
+                draw_circle_lines(pos.x as f32 + 7.5, pos.y as f32 + 7.5, 10.0, 1.0, BLUE);
+            }
+        }
+    }
+}
+
 pub fn draw_health(world: &World<Context>, ctx: &Context) {
     let player = world.get::<Player>();
     let health = world.get::<Health>();

@@ -1,4 +1,5 @@
-use crate::{ecs::{Component, World}, Context};
+use crate::ecs::{Component, World};
+use crate::Context;
 
 pub fn register_components(world: &mut World<Context>) {
     world.register::<Pos>();
@@ -39,7 +40,10 @@ impl Component for Vel {}
 pub struct Spr(pub i32);
 impl Component for Spr {}
 
-pub struct Player;
+#[derive(Default)]
+pub struct Player {
+    pub attack: bool,
+}
 impl Component for Player {}
 
 #[derive(Clone, Copy)]

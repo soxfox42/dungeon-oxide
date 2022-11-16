@@ -55,7 +55,7 @@ async fn main() {
             .with_component(Vel::new(0, 0))
             .with_component(Collider::new(15, 15))
             .with_component(Spr(234))
-            .with_component(Player)
+            .with_component(Player::default())
             .with_component(Health(5))
     });
 
@@ -65,6 +65,7 @@ async fn main() {
             .with_component(Vel::new(0, 0))
             .with_component(Collider::new(15, 15))
             .with_component(Spr(235))
+            .with_component(Health(2))
             .with_component(HealthMod {
                 health: -1,
                 cooldown: 0,

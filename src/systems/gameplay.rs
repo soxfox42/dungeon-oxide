@@ -10,11 +10,15 @@ use macroquad::prelude::*;
 
 const PLAYER_SPEED: i32 = 2;
 pub fn player_input(world: &World<Context>, _ctx: &Context) {
+    let pos = world.get::<Pos>();
+    let mut health = world.get_mut::<Health>();
     let mut vel = world.get_mut::<Vel>();
-    let player = world.get::<Player>();
+    let mut player = world.get_mut::<Player>();
 
-    for data in izip!(vel.iter_mut(), player.iter()) {
-        if let (Some(vel), Some(_player)) = data {
+    let player_pos = pos[player.iter().position(Option::is_some).unwrap()].unwrap();
+
+    for data in izip!(vel.iter_mut(), player.iter_mut()) {
+        if let (Some(vel), Some(player)) = data {
             if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) {
                 vel.y = vel.y.min(-PLAYER_SPEED);
             }
@@ -26,6 +30,22 @@ pub fn player_input(world: &World<Context>, _ctx: &Context) {
             }
             if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
                 vel.x = vel.y.max(PLAYER_SPEED);
+            }
+
+            if is_key_down(KeyCode::Space) {
+                player.attack = true;
+                for data in izip!(pos.iter(), health.iter_mut()) {
+                    if let (Some(pos), Some(health)) = data {
+                        let dx = player_pos.x - pos.x;
+                        let dy = player_pos.y - pos.y;
+                        let distance_sq = (dx as f64).powi(2) + (dy as f64).powi(2);
+                        if distance_sq > 0.0 && distance_sq < 400.0 {
+                            health.0 -= 1;
+                        }
+                    }
+                }
+            } else {
+                player.attack = false;
             }
         }
     }
@@ -188,6 +208,21 @@ pub fn move_pushables(world: &World<Context>, ctx: &Context) {
     for (pos, new_pos) in pos.iter_mut().zip(new_pos.iter()) {
         if let Some(new_pos) = new_pos {
             *pos = Some(*new_pos);
+        }
+    }
+}
+
+pub fn remove_dead(world: &World<Context>, _ctx: &Context) {
+    let mut spr = world.get_mut::<Spr>();
+    let mut colliders = world.get_mut::<Collider>();
+    let health = world.get::<Health>();
+
+    for (spr, collider, health) in izip!(spr.iter_mut(), colliders.iter_mut(), health.iter()) {
+        if let Some(health) = health {
+            if health.0 <= 0 {
+                *spr = None;
+                *collider = None;
+            }
         }
     }
 }
