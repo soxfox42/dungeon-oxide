@@ -12,5 +12,6 @@ pub fn register_systems(world: &mut World<Context>) {
     world.system(player_input);
     world.system(move_followers);
     world.system(apply_velocities);
+    world.system(move_pushables);
     world.system(update_health);
 }

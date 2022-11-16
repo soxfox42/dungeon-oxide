@@ -72,6 +72,15 @@ async fn main() {
             .with_component(Follow(player))
     });
 
+    world.add_entity(|entity| {
+        entity
+            .with_component(Pos::new(128, 128))
+            .with_component(Vel::new(0, 0))
+            .with_component(Collider::new(12, 12))
+            .with_component(Spr(240))
+            .with_component(Push)
+    });
+
     let render_target = render_target(256, 192);
     render_target.texture.set_filter(FilterMode::Nearest);
     let camera = Camera2D {

@@ -31,7 +31,7 @@ pub fn player_input(world: &World<Context>, _ctx: &Context) {
     }
 }
 
-pub fn collide(pos: (i32, i32), collider: Collider, level: &[u8]) -> bool {
+fn collide(pos: (i32, i32), collider: Collider, level: &[u8]) -> bool {
     let (x1, y1) = pos;
     let (x2, y2) = (x1 + collider.w, y1 + collider.h);
     let tiles = [
@@ -121,6 +121,55 @@ pub fn move_followers(world: &World<Context>, _ctx: &Context) {
             let other_pos = pos[follow.0].unwrap();
             vel.x = (other_pos.x - my_pos.x).signum();
             vel.y = (other_pos.y - my_pos.y).signum();
+        }
+    }
+}
+
+pub fn move_pushables(world: &World<Context>, ctx: &Context) {
+    let mut pos = world.get_mut::<Pos>();
+    let vel = world.get::<Vel>();
+    let colliders = world.get::<Collider>();
+    let push = world.get::<Push>();
+    let player = world.get::<Player>();
+
+    let player_idx = player
+        .iter()
+        .position(Option::is_some)
+        .expect("Player entity missing.");
+    let player_pos = pos[player_idx].unwrap();
+    let player_coll = colliders[player_idx].unwrap();
+    let player_vel = vel[player_idx].unwrap();
+
+    let mut new_pos = vec![None; pos.len()];
+    let mut new_player_pos = player_pos;
+
+    for (i, data) in izip!(pos.iter(), colliders.iter(), push.iter()).enumerate() {
+        if let (Some(push_pos), Some(push_coll), Some(_push)) = data {
+            if aabb(*push_pos, *push_coll, player_pos, player_coll) {
+                if !collide(
+                    (push_pos.x + player_vel.x, push_pos.y + player_vel.y),
+                    *push_coll,
+                    ctx.level,
+                ) {
+                    new_pos[i] = Some(Pos {
+                        x: push_pos.x + player_vel.x,
+                        y: push_pos.y + player_vel.y,
+                    })
+                } else {
+                    new_player_pos = Pos {
+                        x: player_pos.x - player_vel.x,
+                        y: player_pos.y - player_vel.y,
+                    };
+                }
+            }
+        }
+    }
+
+    pos[player_idx] = Some(new_player_pos);
+
+    for (pos, new_pos) in pos.iter_mut().zip(new_pos.iter()) {
+        if let Some(new_pos) = new_pos {
+            *pos = Some(*new_pos);
         }
     }
 }

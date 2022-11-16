@@ -9,9 +9,10 @@ pub fn register_components(world: &mut World<Context>) {
     world.register::<Health>();
     world.register::<HealthMod>();
     world.register::<Follow>();
+    world.register::<Push>();
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pos {
     pub x: i32,
     pub y: i32,
@@ -23,6 +24,7 @@ impl Pos {
 }
 impl Component for Pos {}
 
+#[derive(Clone, Copy)]
 pub struct Vel {
     pub x: i32,
     pub y: i32,
@@ -63,3 +65,6 @@ impl Component for HealthMod {}
 
 pub struct Follow(pub usize);
 impl Component for Follow {}
+
+pub struct Push;
+impl Component for Push {}
