@@ -16,12 +16,14 @@ pub fn draw_sprites(world: &World<Context>, ctx: &Context) {
     }
 }
 
-pub fn draw_health(world: &World<Context>, _ctx: &Context) {
+pub fn draw_health(world: &World<Context>, ctx: &Context) {
     let player = world.get::<Player>();
     let health = world.get::<Health>();
     for data in izip!(player.iter(), health.iter()) {
         if let (Some(_player), Some(health)) = data {
-            draw_text(&format!("Health: {}", health.0), 10.0, 15.0, 10.0, WHITE);
+            for i in 0..5 {
+                draw_tile(ctx.tileset, if health.0 > i { 238 } else { 239 }, (i * 14) as f32, 0.0);
+            }
         }
     }
 }
