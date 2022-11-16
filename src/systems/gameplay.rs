@@ -15,16 +15,16 @@ pub fn player_input(world: &World<Context>, _ctx: &Context) {
         if let (Some(vel), Some(_player)) = data {
             vel.x = 0;
             vel.y = 0;
-            if is_key_down(KeyCode::Up) {
+            if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) {
                 vel.y -= PLAYER_SPEED;
             }
-            if is_key_down(KeyCode::Down) {
+            if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) {
                 vel.y += PLAYER_SPEED;
             }
-            if is_key_down(KeyCode::Left) {
+            if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
                 vel.x -= PLAYER_SPEED;
             }
-            if is_key_down(KeyCode::Right) {
+            if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
                 vel.x += PLAYER_SPEED;
             }
         }
