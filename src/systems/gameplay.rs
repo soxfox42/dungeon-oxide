@@ -1,3 +1,5 @@
+use std::cmp;
+
 use crate::ecs::World;
 use crate::util::aabb;
 use crate::{components::*, tiles};
@@ -13,19 +15,17 @@ pub fn player_input(world: &World<Context>, _ctx: &Context) {
 
     for data in izip!(vel.iter_mut(), player.iter()) {
         if let (Some(vel), Some(_player)) = data {
-            vel.x = 0;
-            vel.y = 0;
             if is_key_down(KeyCode::Up) || is_key_down(KeyCode::W) {
-                vel.y -= PLAYER_SPEED;
+                vel.y = vel.y.min(-PLAYER_SPEED);
             }
             if is_key_down(KeyCode::Down) || is_key_down(KeyCode::S) {
-                vel.y += PLAYER_SPEED;
+                vel.y = vel.y.max(PLAYER_SPEED);
             }
             if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
-                vel.x -= PLAYER_SPEED;
+                vel.x = vel.x.min(-PLAYER_SPEED);
             }
             if is_key_down(KeyCode::Right) || is_key_down(KeyCode::D) {
-                vel.x += PLAYER_SPEED;
+                vel.x = vel.y.max(PLAYER_SPEED);
             }
         }
     }
@@ -69,10 +69,20 @@ pub fn apply_velocities(world: &World<Context>, ctx: &Context) {
     }
 }
 
+pub fn decelerate(world: &World<Context>, _ctx: &Context) {
+    let mut vel = world.get_mut::<Vel>();
+
+    for vel in vel.iter_mut().flatten() {
+        vel.x -= vel.x.signum();
+        vel.y -= vel.y.signum();
+    }
+}
+
 pub fn update_health(world: &World<Context>, _ctx: &Context) {
     let mut health = world.get_mut::<Health>();
     let mut mods = world.get_mut::<HealthMod>();
     let pos = world.get::<Pos>();
+    let mut vel = world.get_mut::<Vel>();
     let colliders = world.get::<Collider>();
 
     for (i, health) in health.iter_mut().enumerate() {
@@ -96,7 +106,15 @@ pub fn update_health(world: &World<Context>, _ctx: &Context) {
                 colliders[j].unwrap(),
             ) {
                 health.0 += modifier.health;
-                modifier.cooldown = 60;
+                modifier.cooldown = 20;
+                if let Some(ref mut vel) = vel[i] {
+                    vel.x = (pos[i].unwrap().x - pos[j].unwrap().x) * 2 / 3;
+                    vel.y = (pos[i].unwrap().y - pos[j].unwrap().y) * 2 / 3;
+                }
+                if let Some(ref mut vel) = vel[j] {
+                    vel.x = (pos[j].unwrap().x - pos[i].unwrap().x) * 2 / 3;
+                    vel.y = (pos[j].unwrap().y - pos[i].unwrap().y) * 2 / 3;
+                }
             }
         }
     }
@@ -119,8 +137,8 @@ pub fn move_followers(world: &World<Context>, _ctx: &Context) {
                 panic!("attempted to follow position-less entity");
             }
             let other_pos = pos[follow.0].unwrap();
-            vel.x = (other_pos.x - my_pos.x).signum();
-            vel.y = (other_pos.y - my_pos.y).signum();
+            vel.x = cmp::max_by((other_pos.x - my_pos.x).signum(), vel.x, |a, b| a.abs().cmp(&b.abs()));
+            vel.y = cmp::max_by((other_pos.y - my_pos.y).signum(), vel.y, |a, b| a.abs().cmp(&b.abs()));
         }
     }
 }

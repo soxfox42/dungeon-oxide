@@ -14,4 +14,5 @@ pub fn register_systems(world: &mut World<Context>) {
     world.system(apply_velocities);
     world.system(move_pushables);
     world.system(update_health);
+    world.system(decelerate);
 }
