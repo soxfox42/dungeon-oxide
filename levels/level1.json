@@ -1,0 +1,21 @@
+{
+    "map": 0,
+    "entities": [
+        [
+            { "type": "pos", "x": 32, "y": 32 },
+            { "type": "vel", "x": 0, "y": 0 },
+            { "type": "spr", "id": 234 },
+            { "type": "player" },
+            { "type": "collider", "w": 15, "h": 15 },
+            { "type": "health", "val": 5 }
+        ],
+        [
+            { "type": "pos", "x": 208, "y": 144 },
+            { "type": "vel", "x": 0, "y": 0 },
+            { "type": "spr", "id": 234 },
+            { "type": "collider", "w": 15, "h": 15 },
+            { "type": "healthmod", "val": -1 },
+            { "type": "follow", "id": 0 }
+        ]
+    ]
+}

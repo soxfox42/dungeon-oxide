@@ -1,11 +1,13 @@
 mod components;
 mod ecs;
+mod loader;
 mod systems;
 mod tiles;
 mod util;
 
 use components::*;
 use ecs::World;
+use loader::load_level;
 use systems::*;
 use util::draw_tiles;
 
@@ -17,10 +19,14 @@ const LEVEL_WIDTH: usize = 16;
 /// Global data passed to all systems
 pub struct Context {
     tileset: Texture2D,
-    level: &'static [u8],
+    map: &'static [u8],
 }
 
-const LEVELS: &[&[u8]] = &[
+const LEVELS: &[&str] = &[
+    include_str!("../levels/level1.json"),
+];
+
+const MAPS: &[&[u8]] = &[
     include_bytes!("../levels/level1.dat"),
     include_bytes!("../levels/level2.dat"),
 ];
@@ -37,50 +43,20 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let context = Context {
+    let mut context = Context {
         tileset: Texture2D::from_file_with_format(
             include_bytes!("../assets/tiles.png"),
             Some(ImageFormat::Png),
         ),
-        level: LEVELS[0],
+        map: MAPS[0],
     };
 
     let mut world = World::new();
     register_components(&mut world);
     register_systems(&mut world);
 
-    let player = world.add_entity(|entity| {
-        entity
-            .with_component(Pos::new(32, 32))
-            .with_component(Vel::new(0, 0))
-            .with_component(Collider::new(15, 15))
-            .with_component(Spr(234))
-            .with_component(Player::default())
-            .with_component(Health(5))
-    });
-
-    world.add_entity(|entity| {
-        entity
-            .with_component(Pos::new(96, 64))
-            .with_component(Vel::new(0, 0))
-            .with_component(Collider::new(15, 15))
-            .with_component(Spr(235))
-            .with_component(Health(2))
-            .with_component(HealthMod {
-                health: -1,
-                cooldown: 0,
-            })
-            .with_component(Follow(player))
-    });
-
-    world.add_entity(|entity| {
-        entity
-            .with_component(Pos::new(128, 128))
-            .with_component(Vel::new(0, 0))
-            .with_component(Collider::new(12, 12))
-            .with_component(Spr(240))
-            .with_component(Push)
-    });
+    let map_id = load_level(&mut world, LEVELS[0]);
+    context.map = MAPS[map_id];
 
     let render_target = render_target(256, 192);
     render_target.texture.set_filter(FilterMode::Nearest);
@@ -94,7 +70,7 @@ async fn main() {
         set_camera(&camera);
         clear_background(BLACK);
 
-        draw_tiles(context.level, context.tileset);
+        draw_tiles(context.map, context.tileset);
 
         world.tick(&context);
 

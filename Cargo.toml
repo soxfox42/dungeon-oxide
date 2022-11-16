@@ -7,3 +7,4 @@ license = "MIT"
 [dependencies]
 itertools = "0.10.5"
 macroquad = "0.3.24"
+serde_json = "1.0.87"

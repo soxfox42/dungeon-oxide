@@ -76,10 +76,10 @@ pub fn apply_velocities(world: &World<Context>, ctx: &Context) {
 
     for data in izip!(pos.iter_mut(), vel.iter(), colliders.iter()) {
         if let (Some(pos), Some(vel), Some(collider)) = data {
-            if !collide((pos.x + vel.x, pos.y), *collider, ctx.level) {
+            if !collide((pos.x + vel.x, pos.y), *collider, ctx.map) {
                 pos.x += vel.x;
             }
-            if !collide((pos.x, pos.y + vel.y), *collider, ctx.level) {
+            if !collide((pos.x, pos.y + vel.y), *collider, ctx.map) {
                 pos.y += vel.y;
             }
         } else if let (Some(pos), Some(vel), _) = data {
@@ -187,7 +187,7 @@ pub fn move_pushables(world: &World<Context>, ctx: &Context) {
                 if !collide(
                     (push_pos.x + player_vel.x, push_pos.y + player_vel.y),
                     *push_coll,
-                    ctx.level,
+                    ctx.map,
                 ) {
                     new_pos[i] = Some(Pos {
                         x: push_pos.x + player_vel.x,
