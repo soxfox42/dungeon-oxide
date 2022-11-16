@@ -100,4 +100,10 @@ pub fn update_health(world: &World<Context>, _ctx: &Context) {
             }
         }
     }
+
+    for modifier in mods.iter_mut().flatten() {
+        if modifier.cooldown > 0 {
+            modifier.cooldown -= 1;
+        }
+    }
 }
