@@ -6,8 +6,11 @@ pub fn register_components(world: &mut World<Context>) {
     world.register::<Spr>();
     world.register::<Player>();
     world.register::<Collider>();
+    world.register::<Health>();
+    world.register::<HealthMod>();
 }
 
+#[derive(Clone, Copy)]
 pub struct Pos {
     pub x: i32,
     pub y: i32,
@@ -47,3 +50,12 @@ impl Collider {
     }
 }
 impl Component for Collider {}
+
+pub struct Health(pub i32);
+impl Component for Health {}
+
+pub struct HealthMod {
+    pub health: i32,
+    pub cooldown: u32,
+}
+impl Component for HealthMod {}

@@ -53,11 +53,20 @@ async fn main() {
 
     world.add_entity(|entity| {
         entity
+            .with_component(Pos::new(98, 66))
+            .with_component(Collider::new(11, 11))
+            .with_component(Spr(1))
+            .with_component(HealthMod { health: -1, cooldown: 0 })
+    });
+
+    world.add_entity(|entity| {
+        entity
             .with_component(Pos::new(32, 32))
             .with_component(Vel::new(0, 0))
             .with_component(Collider::new(16, 16))
             .with_component(Spr(0))
             .with_component(Player)
+            .with_component(Health(10))
     });
 
     let render_target = render_target(256, 192);

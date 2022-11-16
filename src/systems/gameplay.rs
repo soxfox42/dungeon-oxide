@@ -1,5 +1,6 @@
-use crate::{components::*, tiles};
 use crate::ecs::World;
+use crate::util::aabb;
+use crate::{components::*, tiles};
 use crate::{Context, LEVEL_WIDTH, TILE_SIZE};
 
 use itertools::izip;
@@ -64,6 +65,39 @@ pub fn apply_velocities(world: &World<Context>, ctx: &Context) {
         } else if let (Some(pos), Some(vel), _) = data {
             pos.x += vel.x;
             pos.y += vel.y;
+        }
+    }
+}
+
+pub fn update_health(world: &World<Context>, _ctx: &Context) {
+    let mut health = world.get_mut::<Health>();
+    let mut mods = world.get_mut::<HealthMod>();
+    let pos = world.get::<Pos>();
+    let colliders = world.get::<Collider>();
+
+    for (i, health) in health.iter_mut().enumerate() {
+        if health.is_none() || colliders[i].is_none() {
+            continue;
+        }
+        let health = health.as_mut().unwrap();
+        for (j, modifier) in mods.iter_mut().enumerate() {
+            if i == j || modifier.is_none() || colliders[j].is_none() {
+                continue;
+            }
+            let modifier = modifier.as_mut().unwrap();
+            if modifier.cooldown > 0 {
+                continue;
+            }
+
+            if aabb(
+                pos[i].unwrap(),
+                colliders[i].unwrap(),
+                pos[j].unwrap(),
+                colliders[j].unwrap(),
+            ) {
+                health.0 += modifier.health;
+                modifier.cooldown = 60;
+            }
         }
     }
 }

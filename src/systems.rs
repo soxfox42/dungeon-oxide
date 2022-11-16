@@ -8,6 +8,8 @@ use crate::{ecs::World, Context};
 
 pub fn register_systems(world: &mut World<Context>) {
     world.system(draw_sprites);
+    world.system(draw_health);
     world.system(player_input);
     world.system(apply_velocities);
+    world.system(update_health);
 }
