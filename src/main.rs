@@ -46,15 +46,7 @@ async fn main() {
     register_components(&mut world);
     register_systems(&mut world);
 
-    world.add_entity(|entity| {
-        entity
-            .with_component(Pos::new(96, 64))
-            .with_component(Collider::new(15, 15))
-            .with_component(Spr(235))
-            .with_component(HealthMod { health: -1, cooldown: 0 })
-    });
-
-    world.add_entity(|entity| {
+    let player= world.add_entity(|entity| {
         entity
             .with_component(Pos::new(32, 32))
             .with_component(Vel::new(0, 0))
@@ -63,6 +55,17 @@ async fn main() {
             .with_component(Player)
             .with_component(Health(10))
     });
+
+    world.add_entity(|entity| {
+        entity
+            .with_component(Pos::new(96, 64))
+            .with_component(Vel::new(0, 0))
+            .with_component(Collider::new(15, 15))
+            .with_component(Spr(235))
+            .with_component(HealthMod { health: -1, cooldown: 0 })
+            .with_component(Follow(player))
+    });
+
 
     let render_target = render_target(256, 192);
     render_target.texture.set_filter(FilterMode::Nearest);

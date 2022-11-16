@@ -8,6 +8,7 @@ pub fn register_components(world: &mut World<Context>) {
     world.register::<Collider>();
     world.register::<Health>();
     world.register::<HealthMod>();
+    world.register::<Follow>();
 }
 
 #[derive(Clone, Copy)]
@@ -59,3 +60,6 @@ pub struct HealthMod {
     pub cooldown: u32,
 }
 impl Component for HealthMod {}
+
+pub struct Follow(pub usize);
+impl Component for Follow {}

@@ -6,7 +6,7 @@ use crate::{Context, LEVEL_WIDTH, TILE_SIZE};
 use itertools::izip;
 use macroquad::prelude::*;
 
-const PLAYER_SPEED: i32 = 1;
+const PLAYER_SPEED: i32 = 2;
 pub fn player_input(world: &World<Context>, _ctx: &Context) {
     let mut vel = world.get_mut::<Vel>();
     let player = world.get::<Player>();
@@ -104,6 +104,23 @@ pub fn update_health(world: &World<Context>, _ctx: &Context) {
     for modifier in mods.iter_mut().flatten() {
         if modifier.cooldown > 0 {
             modifier.cooldown -= 1;
+        }
+    }
+}
+
+pub fn move_followers(world: &World<Context>, _ctx: &Context) {
+    let pos = world.get::<Pos>();
+    let mut vel = world.get_mut::<Vel>();
+    let follow = world.get::<Follow>();
+
+    for data in izip!(pos.iter(), vel.iter_mut(), follow.iter()) {
+        if let (Some(my_pos), Some(vel), Some(follow)) = data {
+            if pos[follow.0].is_none() {
+                panic!("attempted to follow position-less entity");
+            }
+            let other_pos = pos[follow.0].unwrap();
+            vel.x = (other_pos.x - my_pos.x).signum();
+            vel.y = (other_pos.y - my_pos.y).signum();
         }
     }
 }
