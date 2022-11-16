@@ -20,7 +20,10 @@ pub struct Context {
     level: &'static [u8],
 }
 
-const LEVELS: &[&[u8]] = &[include_bytes!("../levels/level1.dat")];
+const LEVELS: &[&[u8]] = &[
+    include_bytes!("../levels/level1.dat"),
+    include_bytes!("../levels/level2.dat"),
+];
 
 fn window_conf() -> Conf {
     Conf {
@@ -46,7 +49,7 @@ async fn main() {
     register_components(&mut world);
     register_systems(&mut world);
 
-    let player= world.add_entity(|entity| {
+    let player = world.add_entity(|entity| {
         entity
             .with_component(Pos::new(32, 32))
             .with_component(Vel::new(0, 0))
@@ -62,10 +65,12 @@ async fn main() {
             .with_component(Vel::new(0, 0))
             .with_component(Collider::new(15, 15))
             .with_component(Spr(235))
-            .with_component(HealthMod { health: -1, cooldown: 0 })
+            .with_component(HealthMod {
+                health: -1,
+                cooldown: 0,
+            })
             .with_component(Follow(player))
     });
-
 
     let render_target = render_target(256, 192);
     render_target.texture.set_filter(FilterMode::Nearest);
