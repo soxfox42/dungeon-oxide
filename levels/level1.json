@@ -14,6 +14,7 @@
             { "type": "vel", "x": 0, "y": 0 },
             { "type": "spr", "id": 235 },
             { "type": "collider", "w": 15, "h": 15 },
+            { "type": "health", "val": 1 },
             { "type": "healthmod", "val": -1 },
             { "type": "follow", "id": 0 }
         ]
