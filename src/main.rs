@@ -24,6 +24,7 @@ pub struct Context {
 
 const LEVELS: &[&str] = &[
     include_str!("../levels/level1.json"),
+    include_str!("../levels/level2.json"),
 ];
 
 const MAPS: &[&[u8]] = &[

@@ -1,5 +1,5 @@
 {
-    "map": 0,
+    "map": 1,
     "entities": [
         [
             { "type": "pos", "x": 32, "y": 32 },
@@ -10,12 +10,15 @@
             { "type": "health", "val": 5 }
         ],
         [
-            { "type": "pos", "x": 208, "y": 144 },
-            { "type": "vel", "x": 0, "y": 0 },
-            { "type": "spr", "id": 235 },
-            { "type": "collider", "w": 15, "h": 15 },
-            { "type": "healthmod", "val": -1 },
-            { "type": "follow", "id": 0 }
+            { "type": "pos", "x": 144, "y": 80 },
+            { "type": "spr", "id": 236 },
+            { "type": "push" }
+        ],
+        [
+            { "type": "pos", "x": 80, "y": 80 },
+            { "type": "spr", "id": 240 },
+            { "type": "collider", "w": 12, "h": 12 },
+            { "type": "push" }
         ]
     ]
 }
