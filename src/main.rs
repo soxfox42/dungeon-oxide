@@ -56,7 +56,7 @@ async fn main() {
             .with_component(Collider::new(15, 15))
             .with_component(Spr(234))
             .with_component(Player)
-            .with_component(Health(10))
+            .with_component(Health(5))
     });
 
     world.add_entity(|entity| {
